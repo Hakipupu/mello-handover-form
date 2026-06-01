@@ -181,12 +181,6 @@ const CARRY = [
 const CHECK = '<div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div>';
 const LS = "mh_handover_v1";
 
-const EMAILJS_CONFIG = {
-  PUBLIC_KEY: "zJecTpdoiqsfrr3Of",
-  SERVICE_ID: "service_gtw5hbc",
-  TEMPLATE_ID: "template_zwkre5p"
-};
-
 function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
 
 function render(){
@@ -289,23 +283,21 @@ async function saveAndEmail(){
     const subject = "Mello House Shift Handover — " + (o.meta.date || "") + " (" + (o.meta.out || "opening") + " → " + (o.meta.in || "closing") + ")";
     const message = reportText(o);
 
-    // Send email via EmailJS API
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    // Send via FormSubmit (free, no API key needed)
+    const response = await fetch('https://formsubmit.co/ajax/f7efeb3e09ce67cea97de0c22f8d2b3a', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        service_id: EMAILJS_CONFIG.SERVICE_ID,
-        template_id: EMAILJS_CONFIG.TEMPLATE_ID,
-        user_id: EMAILJS_CONFIG.PUBLIC_KEY,
-        template_params: {
-          to_email: emailInput,
-          subject: subject,
-          message: message
-        }
+        _subject: subject,
+        _captcha: 'false',
+        email: emailInput,
+        message: message
       })
     });
 
-    if (response.ok) {
+    const data = await response.json();
+    
+    if (response.ok && data.success) {
       // Save to local storage
       o.savedAt = new Date().toISOString();
       localStorage.setItem(LS+"_draft", JSON.stringify(o));
@@ -317,11 +309,11 @@ async function saveAndEmail(){
       toast("✓ Handover saved and emailed!");
       setTimeout(() => newHandover(), 1500);
     } else {
-      toast("Email send failed. Try again.");
+      toast("Email send failed. Please try again.");
     }
   } catch (error) {
     console.error("Error:", error);
-    toast("Failed: " + error.message);
+    toast("Error: " + error.message);
   } finally {
     btn.disabled = false;
     btn.textContent = "Save";
