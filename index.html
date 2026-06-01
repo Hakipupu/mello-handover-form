@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mello House · Shift Handover</title>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/index.min.js"></script>
+<style>
+  :root{
+    --navy:#1F2A44; --navy-soft:#2c3a5c; --gold:#9C7C38; --paper:#f6f4ef; --ink:#23262e; --line:#dcd9d0; --ok:#2f7d52; --warn:#9B2222;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
+  .wrap{max-width:880px; margin:0 auto; padding:0 16px 120px;}
+  header{background:var(--navy); color:#fff; padding:20px 16px 16px; border-bottom:3px solid var(--gold);}
+  header .inner{max-width:880px; margin:0 auto;}
+  .word{font-family:Georgia,"Times New Roman",serif; letter-spacing:.14em; font-size:20px; font-weight:700;}
+  .sub{font-size:12.5px; color:#c7cede; letter-spacing:.04em; margin-top:3px;}
+  .ref{font-size:11.5px; color:#9aa6c0; margin-top:8px;}
+  .bar{position:sticky; top:0; z-index:30; background:rgba(31,42,68,.97); backdrop-filter:blur(6px);
+    color:#fff; display:flex; align-items:center; gap:12px; padding:9px 16px; border-bottom:1px solid #34406180;}
+  .bar .inner{max-width:880px; margin:0 auto; width:100%; display:flex; align-items:center; gap:14px;}
+  .prog{flex:1; height:7px; background:#3a466a; border-radius:20px; overflow:hidden;}
+  .prog>i{display:block; height:100%; width:0%; background:var(--gold); transition:width .25s ease;}
+  .prog-label{font-size:12.5px; color:#dfe4ef; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .meta{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:18px 0 6px;}
+  .field{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 12px;}
+  .field label{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:#8a8676; margin-bottom:3px;}
+  .field input{width:100%; border:0; font-size:15px; color:var(--ink); background:transparent; outline:none; font-family:inherit;}
+  section.block{background:var(--card); border:1px solid var(--line); border-radius:12px; margin-top:16px; overflow:hidden;
+    box-shadow:0 1px 0 rgba(0,0,0,.02);}
+  .block h2{margin:0; background:var(--navy); color:#fff; font-size:13px; letter-spacing:.07em; text-transform:uppercase;
+    padding:11px 14px; display:flex; justify-content:space-between; align-items:center;}
+  .block h2 small{font-weight:400; text-transform:none; letter-spacing:.01em; color:#aeb8d0; font-size:11.5px;}
+  .item{display:flex; align-items:flex-start; gap:13px; padding:12px 14px; border-top:1px solid #eee8dc; cursor:pointer;}
+  .item:first-of-type{border-top:0;}
+  .item:active{background:#faf8f3;}
+  .box{flex:0 0 auto; width:26px; height:26px; border:2px solid #b9b3a3; border-radius:7px; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; transition:.12s;}
+  .box svg{width:16px; height:16px; opacity:0; transform:scale(.5); transition:.12s;}
+  .item.on .box{background:var(--ok); border-color:var(--ok);}
+  .item.on .box svg{opacity:1; transform:scale(1);}
+  .confirm.on .box{background:var(--ok); border-color:var(--ok);}
+  .confirm.on .box svg{opacity:1; transform:scale(1);}
+  .item .txt{font-size:14.5px; line-height:1.34; padding-top:2px;}
+  .item.on .txt{color:#6f6f6a;}
+  .carry .item .box{border-radius:7px;}
+  .carry .note{margin:2px 14px 12px 53px;}
+  .carry .note input{width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px;
+    font-family:inherit; outline:none; display:none;}
+  .carry .item.on + .note input{display:block;}
+  .stop{background:#f4ecdd; border:1px solid #e4d3ad; border-radius:12px; padding:12px 14px; margin-top:16px; font-size:13px; line-height:1.4;}
+  .stop b{color:var(--warn);}
+  .signrow{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px;}
+  .signbox{border:1px dashed #c7c1b1; border-radius:10px; padding:12px;}
+  .signbox .who{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#8a8676;}
+  .signbox input{width:100%; border:0; border-bottom:1px solid var(--line); font-size:15px; padding:6px 0 4px;
+    outline:none; font-family:inherit; background:transparent; margin-top:6px;}
+  .confirm{display:flex; align-items:center; gap:9px; margin-top:10px; cursor:pointer; font-size:12.5px; color:#555;}
+  .confirm .box{width:22px; height:22px;}
+  .actions{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    display:flex; gap:8px; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); z-index:40;}
+  .actions .inner{max-width:880px; margin:0 auto; width:100%; display:flex; gap:8px;}
+  button{font-family:inherit; font-size:13.5px; font-weight:600; border-radius:10px; padding:12px 14px; border:1px solid var(--line);
+    background:#fff; color:var(--navy); cursor:pointer; flex:1; transition:.12s;}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:0.6; cursor:not-allowed;}
+  button.primary{background:var(--navy); color:#fff; border-color:var(--navy);}
+  button.gold{background:var(--gold); color:#fff; border-color:var(--gold);}
+  button.ghost{flex:0 0 auto;}
+  .settings{background:#fffdf8; border:1px dashed #d8cdae; border-radius:10px; padding:11px 13px; margin-top:14px; font-size:13px;}
+  .settings label{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#8a8676; margin-bottom:4px;}
+  .settings input{width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 10px; font-size:14px; font-family:inherit; outline:none;}
+  .settings .help{font-size:11.5px; color:#999; margin-top:6px;}
+  .log{margin-top:16px; font-size:12.5px; color:#777;}
+  .log h3{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8a8676; margin:0 0 6px;}
+  .log div{padding:6px 0; border-top:1px solid var(--line);}
+  .toast{position:fixed; bottom:84px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff;
+    padding:11px 18px; border-radius:30px; font-size:13.5px; opacity:0; pointer-events:none; transition:.25s; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.25);}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  @media (max-width:560px){ .meta,.signrow{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<header><div class="inner">
+  <div class="word">MELLO HOUSE</div>
+  <div class="sub">Shift Handover · Manager on Duty</div>
+  <div class="ref">F&amp;B MH 36 · Handover window 3:00–4:00 PM (target 15–20 min) · both managers present, walk the floor together.</div>
+</div></header>
+
+<div class="bar"><div class="inner">
+  <div class="prog"><i id="pbar"></i></div>
+  <div class="prog-label" id="plabel">0 / 0</div>
+</div></div>
+
+<div class="wrap">
+
+  <div class="meta">
+    <div class="field"><label>Date</label><input id="m_date" type="date"></div>
+    <div class="field"><label>Time (start – finish)</label><input id="m_time" placeholder="e.g. 3:05 – 3:22 PM"></div>
+    <div class="field"><label>Outgoing SIC (opening)</label><input id="m_out" placeholder="Name"></div>
+    <div class="field"><label>Incoming SIC (closing)</label><input id="m_in" placeholder="Name"></div>
+  </div>
+
+  <div id="sections"></div>
+
+  <div class="stop">
+    <b>STOP — call AHM / House Manager before signing if:</b>
+    variance unreconciled · allergy / food-safety / RSA unclear · incident, injury or complaint open · keys or secured items missing · venue not safe to trade.
+  </div>
+
+  <section class="block" style="margin-top:16px;">
+    <h2>Sign-off <small>complete only when both confirm</small></h2>
+    <div class="signrow">
+      <div class="signbox">
+        <div class="who">Outgoing — opening SIC</div>
+        <input id="s_out" placeholder="Name">
+        <div class="confirm" data-confirm="out"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div> I confirm the shift is accurately handed over</div>
+      </div>
+      <div class="signbox">
+        <div class="who">Incoming — closing SIC</div>
+        <input id="s_in" placeholder="Name">
+        <div class="confirm" data-confirm="in"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div> I have received, verified and now own the shift</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="settings">
+    <label>Email completed reports to</label>
+    <input id="recipient" placeholder="manager@mellohouse.com" autocomplete="email">
+    <div class="help">Set once — saved on this device. Used by the "Email report" button.</div>
+  </div>
+
+  <div class="log"><h3>Saved on this device</h3><div id="logbody" style="color:#aaa;">No handovers saved yet.</div></div>
+
+</div>
+
+<div class="actions"><div class="inner">
+  <button class="ghost" onclick="newHandover()">New</button>
+  <button onclick="saveDraft(true)">Save</button>
+  <button class="gold" onclick="window.print()">PDF</button>
+  <button class="primary" id="emailBtn" onclick="emailReport()">Email report</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DATA = [
+  { title:"Floor & Set-up", sub:"walk together", items:[
+    "Lounges, library & dining clean, set & presentation-ready.",
+    "Stations 1–3 full; water refilled; menus & wine lists present.",
+    "Bar & wine cellars to par, correct temp; glassware polished.",
+    "Activation ready: library lighting, fireplace, table tennis.",
+    "POS / Micros / printers up & rolls stocked; coffee, water, milk ready.",
+  ]},
+  { title:"Service & Members", sub:"", items:[
+    "86/85 list current; specials / set menu / chef selection confirmed.",
+    "Bookings, covers & VIP movements / preferences briefed.",
+    "Events (IVVY): run sheet, timing, pax & billing confirmed.",
+    "Allergies & dietary handed over in writing.",
+    "Kitchen issues / delayed orders / KOT matters explained.",
+  ]},
+  { title:"Money", sub:"zero variance", items:[
+    "Open tabs / tables in BEPOZ named, with reason each is open.",
+    "PM / Member chargeback accounts identified + signed chits located.",
+    "EOD ownership accepted by the closing Shift-in-Charge.",
+  ]},
+  { title:"Stock & Team", sub:"", items:[
+    "Spirits, wines & key lines available; shortages flagged to team.",
+    "Deliveries / POs signed for; any discrepancy noted.",
+    "Ice, garnishes & juices ready for the evening.",
+    "Closing roster vs attendance; coverage agreed; breaks owed flagged.",
+    "Outstanding follow-ups & any people matter noted / escalated.",
+  ]},
+];
+const CARRY = [
+  "Incidents / RSA refusals / open complaints",
+  "Allergies for tonight",
+  "Open accounts to resolve",
+  "Maintenance / safety",
+];
+const CHECK = '<div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div>';
+const LS = "mh_handover_v1";
+
+const EMAILJS_CONFIG = {
+  PUBLIC_KEY: "zJecTpdoiqsfrr3Of",
+  SERVICE_ID: "service_gtw5hbc",
+  TEMPLATE_ID: "template_zwkre5p"
+};
+
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+
+function render(){
+  const root = document.getElementById("sections");
+  DATA.forEach((sec, si)=>{
+    const s = el("section","block");
+    s.appendChild(el("h2", null, sec.title + (sec.sub?(' <small>'+sec.sub+'</small>'):'')));
+    sec.items.forEach((it, ii)=>{
+      const row = el("div","item"); row.dataset.k = "s"+si+"_"+ii;
+      row.innerHTML = CHECK + '<div class="txt">'+it+'</div>';
+      row.addEventListener("click", ()=>{ row.classList.toggle("on"); updateProgress(); autosave(); });
+      s.appendChild(row);
+    });
+    root.appendChild(s);
+  });
+  const c = el("section","block carry");
+  c.appendChild(el("h2", null, 'Carry-over flags <small>tick if present — detail goes in the email & EOD</small>'));
+  CARRY.forEach((it, ci)=>{
+    const row = el("div","item"); row.dataset.k = "c_"+ci;
+    row.innerHTML = CHECK + '<div class="txt">'+it+'</div>';
+    row.addEventListener("click", (e)=>{ if(e.target.tagName!=="INPUT"){ row.classList.toggle("on"); autosave(); }});
+    c.appendChild(row);
+    const n = el("div","note"); n.innerHTML = '<input data-note="c_'+ci+'" placeholder="Detail…">';
+    n.querySelector("input").addEventListener("input", autosave);
+    c.appendChild(n);
+  });
+  document.getElementById("sections").appendChild(c);
+}
+
+function totalItems(){ return DATA.reduce((a,s)=>a+s.items.length,0); }
+function updateProgress(){
+  const t = totalItems();
+  const done = document.querySelectorAll('#sections .block:not(.carry) .item.on').length;
+  document.getElementById("pbar").style.width = (t?Math.round(done/t*100):0)+"%";
+  document.getElementById("plabel").textContent = done+" / "+t;
+}
+
+document.querySelectorAll(".confirm").forEach(c=>{
+  c.addEventListener("click", ()=>{ c.classList.toggle("on"); autosave(); });
+});
+
+function gather(){
+  const o={ meta:{}, items:{}, carry:{}, notes:{}, confirm:{}, sign:{} };
+  o.meta.date=val("m_date"); o.meta.time=val("m_time"); o.meta.out=val("m_out"); o.meta.in=val("m_in");
+  o.sign.out=val("s_out"); o.sign.in=val("s_in");
+  o.confirm.out=document.querySelector('.confirm[data-confirm="out"]').classList.contains("on");
+  o.confirm.in=document.querySelector('.confirm[data-confirm="in"]').classList.contains("on");
+  document.querySelectorAll('#sections .item').forEach(r=>{ if(r.dataset.k.startsWith("c_")) o.carry[r.dataset.k]=r.classList.contains("on"); else o.items[r.dataset.k]=r.classList.contains("on"); });
+  document.querySelectorAll('[data-note]').forEach(n=>{ o.notes[n.dataset.note]=n.value; });
+  return o;
+}
+function apply(o){
+  if(!o) return;
+  setv("m_date",o.meta.date); setv("m_time",o.meta.time); setv("m_out",o.meta.out); setv("m_in",o.meta.in);
+  setv("s_out",o.sign&&o.sign.out); setv("s_in",o.sign&&o.sign.in);
+  document.querySelectorAll('#sections .item').forEach(r=>{ const on=(o.items&&o.items[r.dataset.k])||(o.carry&&o.carry[r.dataset.k]); r.classList.toggle("on",!!on); });
+  document.querySelectorAll('[data-note]').forEach(n=>{ n.value=(o.notes&&o.notes[n.dataset.note])||""; });
+  document.querySelector('.confirm[data-confirm="out"]').classList.toggle("on", !!(o.confirm&&o.confirm.out));
+  document.querySelector('.confirm[data-confirm="in"]').classList.toggle("on", !!(o.confirm&&o.confirm.in));
+  updateProgress();
+}
+function val(id){ return (document.getElementById(id).value||"").trim(); }
+function setv(id,v){ const e=document.getElementById(id); if(e) e.value=v||""; }
+
+function autosave(){ try{ localStorage.setItem(LS+"_draft", JSON.stringify(gather())); }catch(e){} }
+["m_date","m_time","m_out","m_in","s_out","s_in"].forEach(id=>document.getElementById(id).addEventListener("input",autosave));
+
+function reportText(o){
+  const L=[];
+  L.push("MELLO HOUSE — SHIFT HANDOVER (F&B MH 36)");
+  L.push("Date: "+(o.meta.date||"—")+"   Time: "+(o.meta.time||"—"));
+  L.push("Outgoing SIC: "+(o.meta.out||o.sign.out||"—")+"   Incoming SIC: "+(o.meta.in||o.sign.in||"—"));
+  const t=totalItems(); let done=0; const missed=[];
+  DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{ const on=o.items["s"+si+"_"+ii]; if(on)done++; else missed.push("• "+it); }));
+  L.push(""); L.push("Checklist: "+done+" / "+t+" complete.");
+  if(missed.length){ L.push("NOT ticked:"); L.push(missed.join("\n")); }
+  const flags=[]; CARRY.forEach((it,ci)=>{ if(o.carry["c_"+ci]){ const n=o.notes["c_"+ci]; flags.push("• "+it+(n?(": "+n):"")); }});
+  L.push(""); L.push("Carry-over flags: "+(flags.length?"":"none"));
+  if(flags.length) L.push(flags.join("\n"));
+  L.push(""); L.push("Sign-off:");
+  L.push("  Outgoing "+(o.confirm.out?"[CONFIRMED]":"[NOT confirmed]")+" — "+(o.sign.out||o.meta.out||"—"));
+  L.push("  Incoming "+(o.confirm.in?"[CONFIRMED]":"[NOT confirmed]")+" — "+(o.sign.in||o.meta.in||"—"));
+  return L.join("\n");
+}
+
+async function emailReport(){
+  const emailInput = document.getElementById("recipient").value.trim();
+  
+  if (!emailInput) {
+    toast("Please enter an email address");
+    return;
+  }
+
+  const btn = document.getElementById("emailBtn");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+
+  try {
+    const o = gather();
+    const subject = "Mello House Shift Handover — " + (o.meta.date || "") + " (" + (o.meta.out || "opening") + " → " + (o.meta.in || "closing") + ")";
+    const message = reportText(o);
+
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.TEMPLATE_ID,
+      {
+        to_email: emailInput,
+        subject: subject,
+        message: message
+      }
+    );
+
+    if (response.status === 200) {
+      saveDraft(false);
+      toast("✓ Handover emailed successfully!");
+      setTimeout(() => newHandover(), 1500);
+    }
+  } catch (error) {
+    console.error("EmailJS error:", error);
+    toast("Email failed: " + (error.text || error.message || "Unknown error"));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Email report";
+  }
+}
+
+function saveDraft(announce){
+  const o=gather();
+  o.savedAt=new Date().toISOString();
+  try{
+    localStorage.setItem(LS+"_draft", JSON.stringify(o));
+    const log=JSON.parse(localStorage.getItem(LS+"_log")||"[]");
+    log.unshift({ date:o.meta.date, time:o.meta.time, out:o.sign.out||o.meta.out, in:o.sign.in||o.meta.in, at:o.savedAt });
+    localStorage.setItem(LS+"_log", JSON.stringify(log.slice(0,30)));
+    renderLog();
+    if(announce) toast("Handover saved on this device");
+  }catch(e){ if(announce) toast("Saving needs the file opened directly in a browser"); }
+}
+
+function renderLog(){
+  let log=[]; try{ log=JSON.parse(localStorage.getItem(LS+"_log")||"[]"); }catch(e){}
+  const b=document.getElementById("logbody");
+  if(!log.length){ b.style.color="#aaa"; b.textContent="No handovers saved yet."; return; }
+  b.style.color="#777"; b.innerHTML="";
+  log.forEach(r=>{ const d=el("div",null, (r.date||"—")+" · "+(r.time||"")+" — "+(r.out||"?")+" → "+(r.in||"?")); b.appendChild(d); });
+}
+
+function newHandover(){
+  if(!confirm("Start a new handover? This clears the current form (saved reports are kept).")) return;
+  document.querySelectorAll('#sections .item.on').forEach(r=>r.classList.remove("on"));
+  document.querySelectorAll('[data-note]').forEach(n=>n.value="");
+  document.querySelectorAll('.confirm.on').forEach(c=>c.classList.remove("on"));
+  ["m_time","m_out","m_in","s_out","s_in"].forEach(id=>setv(id,""));
+  document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
+  updateProgress(); autosave(); toast("New handover started");
+}
+
+let tt;
+function toast(msg){ const e=document.getElementById("toast"); e.textContent=msg; e.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>e.classList.remove("show"),2200); }
+
+try {
+  emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+} catch(e) {
+  console.error("EmailJS initialization failed:", e);
+}
+
+render();
+document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
+try{ const r=localStorage.getItem(LS+"_recipient"); if(r) document.getElementById("recipient").value=r; }catch(e){}
+document.getElementById("recipient").addEventListener("input",e=>{ try{ localStorage.setItem(LS+"_recipient", e.target.value.trim()); }catch(x){} });
+try{ const d=localStorage.getItem(LS+"_draft"); if(d) apply(JSON.parse(d)); }catch(e){}
+renderLog(); updateProgress();
+</script>
+</body>
+</html>
