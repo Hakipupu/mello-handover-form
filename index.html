@@ -128,9 +128,9 @@
   </section>
 
   <div class="settings">
-    <label>Email completed reports to</label>
+    <label>Email completed handover to</label>
     <input id="recipient" placeholder="manager@mellohouse.com" autocomplete="email">
-    <div class="help">Set once — saved on this device. Used by the "Email report" button.</div>
+    <div class="help">Enter your email — the completed form will be sent here when you click Save.</div>
   </div>
 
   <div class="log"><h3>Saved on this device</h3><div id="logbody" style="color:#aaa;">No handovers saved yet.</div></div>
@@ -139,9 +139,7 @@
 
 <div class="actions"><div class="inner">
   <button class="ghost" onclick="newHandover()">New</button>
-  <button onclick="saveDraft(true)">Save</button>
-  <button class="gold" onclick="window.print()">PDF</button>
-  <button class="primary" id="emailBtn" onclick="emailReport()">Email report</button>
+  <button class="primary" id="saveBtn" onclick="saveAndEmail()">Save</button>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -275,23 +273,24 @@ function reportText(o){
   return L.join("\n");
 }
 
-async function emailReport(){
+async function saveAndEmail(){
   const emailInput = document.getElementById("recipient").value.trim();
   
   if (!emailInput) {
-    toast("Please enter an email address");
+    toast("Please enter an email address first");
     return;
   }
 
-  const btn = document.getElementById("emailBtn");
+  const btn = document.getElementById("saveBtn");
   btn.disabled = true;
-  btn.textContent = "Sending...";
+  btn.textContent = "Saving...";
 
   try {
     const o = gather();
     const subject = "Mello House Shift Handover — " + (o.meta.date || "") + " (" + (o.meta.out || "opening") + " → " + (o.meta.in || "closing") + ")";
     const message = reportText(o);
 
+    // Send email
     const response = await emailjs.send(
       EMAILJS_CONFIG.SERVICE_ID,
       EMAILJS_CONFIG.TEMPLATE_ID,
@@ -303,30 +302,24 @@ async function emailReport(){
     );
 
     if (response.status === 200) {
-      saveDraft(false);
-      toast("✓ Handover emailed successfully!");
+      // Save to local storage
+      o.savedAt = new Date().toISOString();
+      localStorage.setItem(LS+"_draft", JSON.stringify(o));
+      const log=JSON.parse(localStorage.getItem(LS+"_log")||"[]");
+      log.unshift({ date:o.meta.date, time:o.meta.time, out:o.sign.out||o.meta.out, in:o.sign.in||o.meta.in, at:o.savedAt });
+      localStorage.setItem(LS+"_log", JSON.stringify(log.slice(0,30)));
+      renderLog();
+      
+      toast("✓ Handover saved and emailed!");
       setTimeout(() => newHandover(), 1500);
     }
   } catch (error) {
-    console.error("EmailJS error:", error);
-    toast("Email failed: " + (error.text || error.message || "Unknown error"));
+    console.error("Error:", error);
+    toast("Failed: " + (error.text || error.message || "Unknown error"));
   } finally {
     btn.disabled = false;
-    btn.textContent = "Email report";
+    btn.textContent = "Save";
   }
-}
-
-function saveDraft(announce){
-  const o=gather();
-  o.savedAt=new Date().toISOString();
-  try{
-    localStorage.setItem(LS+"_draft", JSON.stringify(o));
-    const log=JSON.parse(localStorage.getItem(LS+"_log")||"[]");
-    log.unshift({ date:o.meta.date, time:o.meta.time, out:o.sign.out||o.meta.out, in:o.sign.in||o.meta.in, at:o.savedAt });
-    localStorage.setItem(LS+"_log", JSON.stringify(log.slice(0,30)));
-    renderLog();
-    if(announce) toast("Handover saved on this device");
-  }catch(e){ if(announce) toast("Saving needs the file opened directly in a browser"); }
 }
 
 function renderLog(){
