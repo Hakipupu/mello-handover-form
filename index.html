@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mello House · Shift Handover</title>
+<style>
+  :root{
+    --navy:#1F2A44; --navy-soft:#2c3a5c; --gold:#9C7C38; --paper:#f6f4ef; --ink:#23262e; --line:#dcd9d0; --ok:#2f7d52; --warn:#9B2222;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
+  .wrap{max-width:880px; margin:0 auto; padding:0 16px 120px;}
+  header{background:var(--navy); color:#fff; padding:20px 16px 16px; border-bottom:3px solid var(--gold);}
+  header .inner{max-width:880px; margin:0 auto;}
+  .word{font-family:Georgia,"Times New Roman",serif; letter-spacing:.14em; font-size:20px; font-weight:700;}
+  .sub{font-size:12.5px; color:#c7cede; letter-spacing:.04em; margin-top:3px;}
+  .ref{font-size:11.5px; color:#9aa6c0; margin-top:8px;}
+  .bar{position:sticky; top:0; z-index:30; background:rgba(31,42,68,.97); backdrop-filter:blur(6px);
+    color:#fff; display:flex; align-items:center; gap:12px; padding:9px 16px; border-bottom:1px solid #34406180;}
+  .bar .inner{max-width:880px; margin:0 auto; width:100%; display:flex; align-items:center; gap:14px;}
+  .prog{flex:1; height:7px; background:#3a466a; border-radius:20px; overflow:hidden;}
+  .prog>i{display:block; height:100%; width:0%; background:var(--gold); transition:width .25s ease;}
+  .prog-label{font-size:12.5px; color:#dfe4ef; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .meta{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:18px 0 6px;}
+  .field{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 12px;}
+  .field label{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:#8a8676; margin-bottom:3px;}
+  .field input{width:100%; border:0; font-size:15px; color:var(--ink); background:transparent; outline:none; font-family:inherit;}
+  section.block{background:var(--card); border:1px solid var(--line); border-radius:12px; margin-top:16px; overflow:hidden;
+    box-shadow:0 1px 0 rgba(0,0,0,.02);}
+  .block h2{margin:0; background:var(--navy); color:#fff; font-size:13px; letter-spacing:.07em; text-transform:uppercase;
+    padding:11px 14px; display:flex; justify-content:space-between; align-items:center;}
+  .block h2 small{font-weight:400; text-transform:none; letter-spacing:.01em; color:#aeb8d0; font-size:11.5px;}
+  .item{display:flex; align-items:flex-start; gap:13px; padding:12px 14px; border-top:1px solid #eee8dc; cursor:pointer;}
+  .item:first-of-type{border-top:0;}
+  .item:active{background:#faf8f3;}
+  .box{flex:0 0 auto; width:26px; height:26px; border:2px solid #b9b3a3; border-radius:7px; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; transition:.12s;}
+  .box svg{width:16px; height:16px; opacity:0; transform:scale(.5); transition:.12s;}
+  .item.on .box{background:var(--ok); border-color:var(--ok);}
+  .item.on .box svg{opacity:1; transform:scale(1);}
+  .confirm.on .box{background:var(--ok); border-color:var(--ok);}
+  .confirm.on .box svg{opacity:1; transform:scale(1);}
+  .item .txt{font-size:14.5px; line-height:1.34; padding-top:2px;}
+  .item.on .txt{color:#6f6f6a;}
+  .carry .item .box{border-radius:7px;}
+  .carry .note{margin:2px 14px 12px 53px;}
+  .carry .note input{width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px;
+    font-family:inherit; outline:none; display:none;}
+  .carry .item.on + .note input{display:block;}
+  .stop{background:#f4ecdd; border:1px solid #e4d3ad; border-radius:12px; padding:12px 14px; margin-top:16px; font-size:13px; line-height:1.4;}
+  .stop b{color:var(--warn);}
+  .signrow{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px;}
+  .signbox{border:1px dashed #c7c1b1; border-radius:10px; padding:12px;}
+  .signbox .who{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#8a8676;}
+  .signbox input{width:100%; border:0; border-bottom:1px solid var(--line); font-size:15px; padding:6px 0 4px;
+    outline:none; font-family:inherit; background:transparent; margin-top:6px;}
+  .confirm{display:flex; align-items:center; gap:9px; margin-top:10px; cursor:pointer; font-size:12.5px; color:#555;}
+  .confirm .box{width:22px; height:22px;}
+  .actions{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    display:flex; gap:8px; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); z-index:40;}
+  .actions .inner{max-width:880px; margin:0 auto; width:100%; display:flex; gap:8px;}
+  button{font-family:inherit; font-size:13.5px; font-weight:600; border-radius:10px; padding:12px 14px; border:1px solid var(--line);
+    background:#fff; color:var(--navy); cursor:pointer; flex:1; transition:.12s;}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:0.6; cursor:not-allowed;}
+  button.primary{background:var(--navy); color:#fff; border-color:var(--navy);}
+  button.gold{background:var(--gold); color:#fff; border-color:var(--gold);}
+  button.ghost{flex:0 0 auto;}
+  .log{margin-top:16px; font-size:12.5px; color:#777;}
+  .log h3{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8a8676; margin:0 0 6px;}
+  .log div{padding:6px 0; border-top:1px solid var(--line);}
+  .toast{position:fixed; bottom:84px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff;
+    padding:11px 18px; border-radius:30px; font-size:13.5px; opacity:0; pointer-events:none; transition:.25s; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.25);}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  @media (max-width:560px){ .meta,.signrow{grid-template-columns:1fr;} }
+  .about{background:#fff; border:1px solid #e3dfd4; border-radius:12px; margin:18px 0 4px; overflow:hidden;}
+  .about-head{padding:12px 16px; font-weight:600; color:#1F2A44; background:#fbfaf7; font-size:14px; border-bottom:1px solid #efeae0;}
+  .about .body{padding:10px 18px 16px; font-size:13.5px; line-height:1.55; color:#3a3f4a;}
+  .about .body h4{margin:14px 0 4px; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:#9C7C38;}
+  .about .body p{margin:0 0 8px;}
+  .about .body .ctrl{font-style:italic; color:#888; font-size:12.5px; border-top:1px solid #e3dfd4; padding-top:10px; margin-top:6px;}
+  .signoff-stmt{padding:12px 14px 0; margin:0; font-size:13px; color:#555; line-height:1.5;}
+</style>
+</head>
+<body>
+<header><div class="inner">
+  <div class="word">MELLO HOUSE</div>
+  <div class="sub">Shift Handover · Manager on Duty</div>
+  <div class="ref">F&amp;B MH 36 · Handover window 2:00–5:00 PM · both managers present, walk the floor together.</div>
+</div></header>
+
+<div class="bar"><div class="inner">
+  <div class="prog"><i id="pbar"></i></div>
+  <div class="prog-label" id="plabel">0 / 0</div>
+</div></div>
+
+<div class="wrap">
+
+  <div class="about">
+    <div class="about-head">Purpose, Scope &amp; Operating Hours</div>
+    <div class="body">
+      <h4>Purpose</h4>
+      <p>To ensure a complete, accountable and consistent transfer of command between the opening Shift-in-Charge and the closing Shift-in-Charge. The handover guarantees that nothing affecting Members, guests, revenue, compliance, safety or service continuity is lost between shifts, and that responsibility for the venue passes cleanly from one named manager to another.</p>
+      <p>This document sits <b>on top of</b> the routine Morning Opening, Bartender Opening, Evening Closing and Bartender Closing checklists &mdash; it does not replace them. Those checklists confirm tasks are done; this handover confirms the <b>shift</b> is understood and owned.</p>
+      <h4>Scope &mdash; who must complete this</h4>
+      <p>This procedure applies to the designated Shift-in-Charge (Manager on Duty) for each shift.</p>
+      <h4>When the handover happens</h4>
+      <p>The handover can take place between <b>2:00 PM and 5:00 PM</b>, as the opening shift (breakfast through lunch) transitions to the closing shift (dinner through late-night service). The routine opening checklists are due to be completed by 4:00 PM; the outgoing Shift-in-Charge must have them ready to present.</p>
+      <h4>Mello House operating hours</h4>
+      <p>Monday&ndash;Wednesday 7:00 AM&ndash;10:00 PM &middot; Thursday 7:00 AM&ndash;11:00 PM &middot; Friday 7:00 AM&ndash;12:00 AM &middot; Saturday 3:00 PM&ndash;12:00 AM &middot; Sunday closed.</p>
+      <p class="ctrl">This is a controlled document. It is completed jointly at every shift handover and forms part of the daily operational record alongside the Opening, Closing and EOD reports.</p>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div class="field"><label>Date</label><input id="m_date" type="date"></div>
+    <div class="field"><label>Time (start – finish)</label><input id="m_time" placeholder="e.g. 3:05 – 3:22 PM"></div>
+    <div class="field"><label>Outgoing SIC (opening)</label><input id="m_out" placeholder="Name"></div>
+    <div class="field"><label>Incoming SIC (closing)</label><input id="m_in" placeholder="Name"></div>
+  </div>
+
+  <div id="sections"></div>
+
+  <section class="block" style="margin-top:16px;">
+    <h2>Sign-off <small>complete only when both confirm</small></h2>
+    <p class="signoff-stmt">By signing, the outgoing manager confirms the above has been accurately and fully handed over; the incoming manager confirms they have received, verified and now <b>own</b> the shift. The handover is complete only when both confirmations are present.</p>
+    <div class="signrow">
+      <div class="signbox">
+        <div class="who">Outgoing — opening SIC</div>
+        <input id="s_out" placeholder="Name">
+        <div class="confirm" data-confirm="out"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div> I confirm the shift is accurately handed over</div>
+      </div>
+      <div class="signbox">
+        <div class="who">Incoming — closing SIC</div>
+        <input id="s_in" placeholder="Name">
+        <div class="confirm" data-confirm="in"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div> I have received, verified and now own the shift</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="log"><h3>Saved on this device</h3><div id="logbody" style="color:#aaa;">No handovers saved yet.</div></div>
+
+</div>
+
+<div class="actions"><div class="inner">
+  <button class="ghost" onclick="newHandover()">New</button>
+  <button class="primary" id="saveBtn" onclick="saveAndEmail()">Save</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+const DATA = [
+  { title:"Pre-Handover Checks", sub:"", items:[
+    "Morning Opening Checklist completed, signed, and ready to present (due by 4:00 PM).",
+    "Bartender Opening Checklist completed, signed, and ready to present (due by 4:00 PM).",
+    "86/85 list printed and current.",
+    "Daily kitchen form updated (market fish, oysters, specials, any kitchen updates).",
+    "Stations 1, 2 and 3 refilled to full inventory and presentation standard.",
+    "Trio snack stands prepared (from 2:30 PM).",
+    "Happy Hour menus placed on tables (from 2:45 PM).",
+  ]},
+  { title:"Joint Floor & Station Walk", sub:"", items:[
+    "Lounges and meeting spaces set and presentation-ready; furniture, cushions and tables sanitised, clean and correctly placed.",
+    "Mellotivo set-up tasks completed (Friday only).",
+    "Library lights manually dimmed.",
+    "POS (BEPOZ) terminals, Micros stations and printers on, logged in, and stocked with printer/EFTPOS rolls for the full shift.",
+    "Fireplace lit (Winter only).",
+    "Table-tennis table set in Boardroom if room is not in use.",
+    "Walkways clear, nothing stored on the floor, chemicals only in designated areas, no personal items at stations or BOH.",
+  ]},
+  { title:"Financial, POS & EOD", sub:"", items:[
+    "All open tabs and tables in BEPOZ closed or handed over.",
+    "Open PM / Member chargeback accounts identified, with matching signed chits located for each.",
+    "EOD reconciliation and reporting completed by opening manager.",
+  ]},
+  { title:"Reservations, Members & Events", sub:"", items:[
+    "Functions / events: run sheet, set-up, timing, expected pax and billing instructions confirmed.",
+  ]},
+  { title:"Beverage, Stock & Ordering", sub:"", items:[
+    "Spirits, wines and key lines checked for availability; shortages communicated to the team.",
+    "Deliveries / purchase orders received during the day signed for; any shortfall or discrepancy noted.",
+    "Par-level gaps and items to be ordered or transferred (Bepoz) flagged for the closing shift.",
+    "Ice stocked for the evening; garnishes and juices fresh and sufficient for expected volume.",
+  ]},
+  { title:"Compliance, Safety & Security", sub:"", items:[
+    "RSA: any intoxication management, refusals of service or related incidents during the day documented and briefed.",
+    "Open / ongoing Member or guest complaints handed over with current status and any commitment made.",
+    "Maintenance / Housekeeping defects logged and reported to the relevant department; tracking status noted.",
+    "HACCP / food-safety matters (temperatures, expiries, FIFO) in order; any issue escalated.",
+    "Keys, access devices, phones and other Mello House collateral physically accounted for and secured.",
+  ]},
+  { title:"Staffing & Roster", sub:"", items:[
+    "Closing roster confirmed against actual attendance; lateness, call-ins or no-shows noted.",
+    "Coverage and section / station allocation for the evening agreed.",
+    "Breaks owed or outstanding from the day flagged.",
+    "Any performance, conduct or wellbeing matter requiring follow-up noted and escalated appropriately.",
+    "Pre-service briefing for the evening team owned by the incoming Shift-in-Charge.",
+  ]},
+];
+const CARRY = [];
+const CHECK = '<div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></div>';
+const LS = "mh_handover_v1";
+const RECIPIENT_EMAIL = "orkhan.mammadov@mellohouse.com";
+// --- EmailJS settings (copy these from your EmailJS dashboard) ---
+const EMAILJS_SERVICE_ID  = "service_gtw5hbc";   // Email Services  -> Service ID
+const EMAILJS_TEMPLATE_ID = "template_0yxc8ov";  // Email Templates -> Template ID
+const EMAILJS_PUBLIC_KEY  = "zJecTpdoiqsfrr3Of"; // Account > General > API Keys -> Public Key
+
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+
+function render(){
+  const root = document.getElementById("sections");
+  DATA.forEach((sec, si)=>{
+    const s = el("section","block");
+    s.appendChild(el("h2", null, sec.title + (sec.sub?(' <small>'+sec.sub+'</small>'):'')));
+    sec.items.forEach((it, ii)=>{
+      const row = el("div","item"); row.dataset.k = "s"+si+"_"+ii;
+      row.innerHTML = CHECK + '<div class="txt">'+it+'</div>';
+      row.addEventListener("click", ()=>{ row.classList.toggle("on"); updateProgress(); autosave(); });
+      s.appendChild(row);
+    });
+    root.appendChild(s);
+  });
+  if(CARRY.length){
+  const c = el("section","block carry");
+  c.appendChild(el("h2", null, 'Carry-over flags <small>tick if present — detail goes in the email & EOD</small>'));
+  CARRY.forEach((it, ci)=>{
+    const row = el("div","item"); row.dataset.k = "c_"+ci;
+    row.innerHTML = CHECK + '<div class="txt">'+it+'</div>';
+    row.addEventListener("click", (e)=>{ if(e.target.tagName!=="INPUT"){ row.classList.toggle("on"); autosave(); }});
+    c.appendChild(row);
+    const n = el("div","note"); n.innerHTML = '<input data-note="c_'+ci+'" placeholder="Detail…">';
+    n.querySelector("input").addEventListener("input", autosave);
+    c.appendChild(n);
+  });
+  document.getElementById("sections").appendChild(c);
+  }
+}
+
+function totalItems(){ return DATA.reduce((a,s)=>a+s.items.length,0); }
+function updateProgress(){
+  const t = totalItems();
+  const done = document.querySelectorAll('#sections .block:not(.carry) .item.on').length;
+  document.getElementById("pbar").style.width = (t?Math.round(done/t*100):0)+"%";
+  document.getElementById("plabel").textContent = done+" / "+t;
+}
+
+document.querySelectorAll(".confirm").forEach(c=>{
+  c.addEventListener("click", ()=>{ c.classList.toggle("on"); autosave(); });
+});
+
+function gather(){
+  const o={ meta:{}, items:{}, carry:{}, notes:{}, confirm:{}, sign:{} };
+  o.meta.date=val("m_date"); o.meta.time=val("m_time"); o.meta.out=val("m_out"); o.meta.in=val("m_in");
+  o.sign.out=val("s_out"); o.sign.in=val("s_in");
+  o.confirm.out=document.querySelector('.confirm[data-confirm="out"]').classList.contains("on");
+  o.confirm.in=document.querySelector('.confirm[data-confirm="in"]').classList.contains("on");
+  document.querySelectorAll('#sections .item').forEach(r=>{ if(r.dataset.k.startsWith("c_")) o.carry[r.dataset.k]=r.classList.contains("on"); else o.items[r.dataset.k]=r.classList.contains("on"); });
+  document.querySelectorAll('[data-note]').forEach(n=>{ o.notes[n.dataset.note]=n.value; });
+  return o;
+}
+function apply(o){
+  if(!o) return;
+  setv("m_date",o.meta.date); setv("m_time",o.meta.time); setv("m_out",o.meta.out); setv("m_in",o.meta.in);
+  setv("s_out",o.sign&&o.sign.out); setv("s_in",o.sign&&o.sign.in);
+  document.querySelectorAll('#sections .item').forEach(r=>{ const on=(o.items&&o.items[r.dataset.k])||(o.carry&&o.carry[r.dataset.k]); r.classList.toggle("on",!!on); });
+  document.querySelectorAll('[data-note]').forEach(n=>{ n.value=(o.notes&&o.notes[n.dataset.note])||""; });
+  document.querySelector('.confirm[data-confirm="out"]').classList.toggle("on", !!(o.confirm&&o.confirm.out));
+  document.querySelector('.confirm[data-confirm="in"]').classList.toggle("on", !!(o.confirm&&o.confirm.in));
+  updateProgress();
+}
+function val(id){ return (document.getElementById(id).value||"").trim(); }
+function setv(id,v){ const e=document.getElementById(id); if(e) e.value=v||""; }
+
+function autosave(){ try{ localStorage.setItem(LS+"_draft", JSON.stringify(gather())); }catch(e){} }
+["m_date","m_time","m_out","m_in","s_out","s_in"].forEach(id=>document.getElementById(id).addEventListener("input",autosave));
+
+function reportText(o){
+  const L=[];
+  L.push("MELLO HOUSE — SHIFT HANDOVER (F&B MH 36)");
+  L.push("Date: "+(o.meta.date||"—")+"   Time: "+(o.meta.time||"—"));
+  L.push("Outgoing SIC: "+(o.meta.out||o.sign.out||"—")+"   Incoming SIC: "+(o.meta.in||o.sign.in||"—"));
+  const t=totalItems(); let done=0; const missed=[];
+  DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{ const on=o.items["s"+si+"_"+ii]; if(on)done++; else missed.push("• "+it); }));
+  L.push(""); L.push("Checklist: "+done+" / "+t+" complete.");
+  if(missed.length){ L.push("NOT ticked:"); L.push(missed.join("\n")); }
+  if(CARRY.length){
+    const flags=[]; CARRY.forEach((it,ci)=>{ if(o.carry["c_"+ci]){ const n=o.notes["c_"+ci]; flags.push("• "+it+(n?(": "+n):"")); }});
+    L.push(""); L.push("Carry-over flags: "+(flags.length?"":"none"));
+    if(flags.length) L.push(flags.join("\n"));
+  }
+  L.push(""); L.push("Sign-off:");
+  L.push("  Outgoing "+(o.confirm.out?"[CONFIRMED]":"[NOT confirmed]")+" — "+(o.sign.out||o.meta.out||"—"));
+  L.push("  Incoming "+(o.confirm.in?"[CONFIRMED]":"[NOT confirmed]")+" — "+(o.sign.in||o.meta.in||"—"));
+  return L.join("\n");
+}
+
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function reportHtml(o){
+  const t=totalItems(); let done=0; let secHtml="";
+  DATA.forEach((sec,si)=>{
+    const conf=[], miss=[];
+    sec.items.forEach((it,ii)=>{ if(o.items["s"+si+"_"+ii]){done++;conf.push(it);} else miss.push(it); });
+    secHtml+='<tr><td style="padding:7px 10px;border-top:1px solid #eee;vertical-align:top;font-weight:600;color:#1F2A44;width:32%">'+esc(sec.title)+'</td>'+
+      '<td style="padding:7px 10px;border-top:1px solid #eee">'+
+      (conf.length?('<span style="color:#2f7d52">\u2714 '+conf.map(esc).join('<br>\u2714 ')+'</span>'):'')+
+      (miss.length?((conf.length?'<br>':'')+'<span style="color:#9B2222">\u2716 '+miss.map(esc).join('<br>\u2716 ')+'</span>'):'')+
+      '</td></tr>';
+  });
+  let carryHtml='';
+  if(CARRY.length){
+    const flags=[]; CARRY.forEach((it,ci)=>{ if(o.carry["c_"+ci]){ const n=o.notes["c_"+ci]; flags.push(esc(it)+(n?(": "+esc(n)):"")); }});
+    carryHtml='<h3 style="color:#9B2222;margin:14px 0 4px;font-size:14px">Carry-over flags</h3><p style="margin:0">'+(flags.length?flags.join('<br>'):'none')+'</p>';
+  }
+  return '<div style="font-family:Arial,Helvetica,sans-serif;color:#23262e;max-width:680px;border:1px solid #e3dfd4">'+
+    '<div style="background:#1F2A44;color:#fff;padding:16px 18px;border-bottom:3px solid #9C7C38">'+
+    '<div style="font-family:Georgia,serif;letter-spacing:.12em;font-size:18px;font-weight:700">MELLO HOUSE</div>'+
+    '<div style="font-size:12px;color:#c7cede">Shift Handover \u00B7 Manager on Duty \u00B7 F&amp;B MH 36</div></div>'+
+    '<div style="padding:14px 18px">'+
+    '<p style="margin:0 0 10px"><b>Date:</b> '+esc(o.meta.date||"\u2014")+' &nbsp;&nbsp; <b>Time:</b> '+esc(o.meta.time||"\u2014")+'<br>'+
+    '<b>Outgoing SIC:</b> '+esc(o.sign.out||o.meta.out||"\u2014")+' &nbsp;&nbsp; <b>Incoming SIC:</b> '+esc(o.sign.in||o.meta.in||"\u2014")+'</p>'+
+    '<p style="margin:0 0 6px"><b>Checklist completed:</b> '+done+' / '+t+'</p>'+
+    '<table style="border-collapse:collapse;width:100%;font-size:13px">'+secHtml+'</table>'+
+    carryHtml+
+    '<h3 style="color:#1F2A44;margin:14px 0 4px;font-size:14px">Sign-off</h3>'+
+    '<p style="margin:0">Outgoing '+(o.confirm.out?'<b style="color:#2f7d52">[CONFIRMED]</b>':'<b style="color:#9B2222">[NOT confirmed]</b>')+' \u2014 '+esc(o.sign.out||o.meta.out||"\u2014")+'<br>'+
+    'Incoming '+(o.confirm.in?'<b style="color:#2f7d52">[CONFIRMED]</b>':'<b style="color:#9B2222">[NOT confirmed]</b>')+' \u2014 '+esc(o.sign.in||o.meta.in||"\u2014")+'</p>'+
+    '</div></div>';
+}
+
+async function saveAndEmail(){
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  const o = gather();
+  const subject = "Mello House Shift Handover \u2014 " + (o.meta.date || "") + " (" + (o.sign.out||o.meta.out || "opening") + " \u2192 " + (o.sign.in||o.meta.in || "closing") + ")";
+
+  // Always save locally first, regardless of email outcome
+  try {
+    o.savedAt = new Date().toISOString();
+    localStorage.setItem(LS+"_draft", JSON.stringify(o));
+    const log=JSON.parse(localStorage.getItem(LS+"_log")||"[]");
+    log.unshift({ date:o.meta.date, time:o.meta.time, out:o.sign.out||o.meta.out, in:o.sign.in||o.meta.in, at:o.savedAt });
+    localStorage.setItem(LS+"_log", JSON.stringify(log.slice(0,30)));
+    renderLog();
+  } catch(e){ console.error("Local save failed:", e); }
+
+  // Email via EmailJS
+  try {
+    const params = {
+      to_email:  RECIPIENT_EMAIL,
+      subject:   subject,
+      date:      o.meta.date,
+      time:      o.meta.time,
+      outgoing:  o.sign.out||o.meta.out,
+      incoming:  o.sign.in||o.meta.in,
+      signoff:   (o.confirm.out&&o.confirm.in) ? "Both confirmed" : "Not fully confirmed",
+      reportHtml: reportHtml(o),
+      message:   reportText(o)
+    };
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params, { publicKey: EMAILJS_PUBLIC_KEY });
+    toast("\u2713 Saved & emailed \u2192 " + RECIPIENT_EMAIL);
+    setTimeout(() => newHandover(), 1800);
+  } catch (error) {
+    console.error("EmailJS error:", error);
+    const msg = (error && (error.text || error.message)) ? (error.text || error.message) : "network/blocked";
+    toast("\u2713 Saved locally \u00B7 email failed: " + msg);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save";
+  }
+}
+
+function renderLog(){
+  let log=[]; try{ log=JSON.parse(localStorage.getItem(LS+"_log")||"[]"); }catch(e){}
+  const b=document.getElementById("logbody");
+  if(!log.length){ b.style.color="#aaa"; b.textContent="No handovers saved yet."; return; }
+  b.style.color="#777"; b.innerHTML="";
+  log.forEach(r=>{ const d=el("div",null, (r.date||"—")+" · "+(r.time||"")+" — "+(r.out||"?")+" → "+(r.in||"?")); b.appendChild(d); });
+}
+
+function newHandover(){
+  if(!confirm("Start a new handover? This clears the current form (saved reports are kept).")) return;
+  document.querySelectorAll('#sections .item.on').forEach(r=>r.classList.remove("on"));
+  document.querySelectorAll('[data-note]').forEach(n=>n.value="");
+  document.querySelectorAll('.confirm.on').forEach(c=>c.classList.remove("on"));
+  ["m_time","m_out","m_in","s_out","s_in"].forEach(id=>setv(id,""));
+  document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
+  updateProgress(); autosave(); toast("New handover started");
+}
+
+let tt;
+function toast(msg){ const e=document.getElementById("toast"); e.textContent=msg; e.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>e.classList.remove("show"),2200); }
+
+render();
+document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
+try{ const d=localStorage.getItem(LS+"_draft"); if(d) apply(JSON.parse(d)); }catch(e){}
+renderLog(); updateProgress();
+</script>
+</body>
+</html>
