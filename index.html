@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mello House · Shift Handover</title>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/index.min.js"></script>
 <style>
   :root{
     --navy:#1F2A44; --navy-soft:#2c3a5c; --gold:#9C7C38; --paper:#f6f4ef; --ink:#23262e; --line:#dcd9d0; --ok:#2f7d52; --warn:#9B2222;
@@ -290,18 +289,23 @@ async function saveAndEmail(){
     const subject = "Mello House Shift Handover — " + (o.meta.date || "") + " (" + (o.meta.out || "opening") + " → " + (o.meta.in || "closing") + ")";
     const message = reportText(o);
 
-    // Send email
-    const response = await emailjs.send(
-      EMAILJS_CONFIG.SERVICE_ID,
-      EMAILJS_CONFIG.TEMPLATE_ID,
-      {
-        to_email: emailInput,
-        subject: subject,
-        message: message
-      }
-    );
+    // Send email via EmailJS API
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: EMAILJS_CONFIG.SERVICE_ID,
+        template_id: EMAILJS_CONFIG.TEMPLATE_ID,
+        user_id: EMAILJS_CONFIG.PUBLIC_KEY,
+        template_params: {
+          to_email: emailInput,
+          subject: subject,
+          message: message
+        }
+      })
+    });
 
-    if (response.status === 200) {
+    if (response.ok) {
       // Save to local storage
       o.savedAt = new Date().toISOString();
       localStorage.setItem(LS+"_draft", JSON.stringify(o));
@@ -312,10 +316,12 @@ async function saveAndEmail(){
       
       toast("✓ Handover saved and emailed!");
       setTimeout(() => newHandover(), 1500);
+    } else {
+      toast("Email send failed. Try again.");
     }
   } catch (error) {
     console.error("Error:", error);
-    toast("Failed: " + (error.text || error.message || "Unknown error"));
+    toast("Failed: " + error.message);
   } finally {
     btn.disabled = false;
     btn.textContent = "Save";
@@ -342,12 +348,6 @@ function newHandover(){
 
 let tt;
 function toast(msg){ const e=document.getElementById("toast"); e.textContent=msg; e.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>e.classList.remove("show"),2200); }
-
-try {
-  emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
-} catch(e) {
-  console.error("EmailJS initialization failed:", e);
-}
 
 render();
 document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
