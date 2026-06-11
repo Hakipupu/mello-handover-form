@@ -83,6 +83,12 @@
   .about .body p{margin:0 0 8px;}
   .about .body .ctrl{font-style:italic; color:#888; font-size:12.5px; border-top:1px solid #e3dfd4; padding-top:10px; margin-top:6px;}
   .signoff-stmt{padding:12px 14px 0; margin:0; font-size:13px; color:#555; line-height:1.5;}
+  .reason{display:none; padding:0 14px 12px 53px; background:#fff;}
+  .reason.show-reason{display:block;}
+  .reason input{width:100%; border:1px solid #e3b7b7; background:#fff7f7; border-radius:8px; padding:9px 11px; font-size:13.5px; font-family:inherit; outline:none;}
+  .reason input::placeholder{color:#c08a8a;}
+  .reason.need input{border-color:#c0392b; background:#fdeeee;}
+  .reason input:focus{border-color:#9C7C38; background:#fff;}
 </style>
 </head>
 <body>
@@ -219,10 +225,21 @@ function render(){
     const s = el("section","block");
     s.appendChild(el("h2", null, sec.title + (sec.sub?(' <small>'+sec.sub+'</small>'):'')));
     sec.items.forEach((it, ii)=>{
-      const row = el("div","item"); row.dataset.k = "s"+si+"_"+ii;
+      const k = "s"+si+"_"+ii;
+      const row = el("div","item"); row.dataset.k = k;
       row.innerHTML = CHECK + '<div class="txt">'+it+'</div>';
-      row.addEventListener("click", ()=>{ row.classList.toggle("on"); updateProgress(); autosave(); });
       s.appendChild(row);
+      const rw = el("div","reason");
+      rw.innerHTML = '<input data-reason="'+k+'" placeholder="Reason it wasn\u2019t completed\u2026">';
+      s.appendChild(rw);
+      const ri = rw.querySelector("input");
+      ri.addEventListener("input", ()=>{ updateGate(); autosave(); });
+      row.addEventListener("click", ()=>{
+        row.classList.toggle("on");
+        if(row.classList.contains("on")){ rw.classList.remove("show-reason","need"); ri.value=""; }
+        else { rw.classList.add("show-reason"); }
+        updateProgress(); updateGate(); autosave();
+      });
     });
     root.appendChild(s);
   });
@@ -250,6 +267,34 @@ function updateProgress(){
   document.getElementById("plabel").textContent = done+" / "+t;
 }
 
+// Items that are unticked AND have no reason typed in — these block sending.
+function pendingItems(){
+  const out=[];
+  document.querySelectorAll('#sections .block:not(.carry) .item').forEach(row=>{
+    if(!row.classList.contains("on")){
+      const inp=document.querySelector('[data-reason="'+row.dataset.k+'"]');
+      if(!inp || !inp.value.trim()) out.push({row:row, inp:inp});
+    }
+  });
+  return out;
+}
+// Reveal the reason box under every unticked item.
+function revealUnchecked(){
+  document.querySelectorAll('#sections .block:not(.carry) .item').forEach(row=>{
+    if(!row.classList.contains("on")){
+      const inp=document.querySelector('[data-reason="'+row.dataset.k+'"]');
+      if(inp) inp.closest('.reason').classList.add("show-reason");
+    }
+  });
+}
+// Clear the red "needs a reason" highlight once a reason is typed; update the Save button hint.
+function updateGate(){
+  document.querySelectorAll('.reason').forEach(w=>{ const inp=w.querySelector('input'); if(inp && inp.value.trim()) w.classList.remove("need"); });
+  const n = pendingItems().length;
+  const btn = document.getElementById("saveBtn");
+  if(btn) btn.textContent = n>0 ? ("Save ("+n+" to resolve)") : "Save & Send";
+}
+
 document.querySelectorAll(".confirm").forEach(c=>{
   c.addEventListener("click", ()=>{ c.classList.toggle("on"); autosave(); });
 });
@@ -262,6 +307,7 @@ function gather(){
   o.confirm.in=document.querySelector('.confirm[data-confirm="in"]').classList.contains("on");
   document.querySelectorAll('#sections .item').forEach(r=>{ if(r.dataset.k.startsWith("c_")) o.carry[r.dataset.k]=r.classList.contains("on"); else o.items[r.dataset.k]=r.classList.contains("on"); });
   document.querySelectorAll('[data-note]').forEach(n=>{ o.notes[n.dataset.note]=n.value; });
+  o.reasons={}; document.querySelectorAll('[data-reason]').forEach(n=>{ o.reasons[n.dataset.reason]=n.value; });
   return o;
 }
 function apply(o){
@@ -270,9 +316,10 @@ function apply(o){
   setv("s_out",o.sign&&o.sign.out); setv("s_in",o.sign&&o.sign.in);
   document.querySelectorAll('#sections .item').forEach(r=>{ const on=(o.items&&o.items[r.dataset.k])||(o.carry&&o.carry[r.dataset.k]); r.classList.toggle("on",!!on); });
   document.querySelectorAll('[data-note]').forEach(n=>{ n.value=(o.notes&&o.notes[n.dataset.note])||""; });
+  document.querySelectorAll('[data-reason]').forEach(n=>{ const v=(o.reasons&&o.reasons[n.dataset.reason])||""; n.value=v; if(v) n.closest('.reason').classList.add("show-reason"); });
   document.querySelector('.confirm[data-confirm="out"]').classList.toggle("on", !!(o.confirm&&o.confirm.out));
   document.querySelector('.confirm[data-confirm="in"]').classList.toggle("on", !!(o.confirm&&o.confirm.in));
-  updateProgress();
+  updateProgress(); updateGate();
 }
 function val(id){ return (document.getElementById(id).value||"").trim(); }
 function setv(id,v){ const e=document.getElementById(id); if(e) e.value=v||""; }
@@ -286,9 +333,9 @@ function reportText(o){
   L.push("Date: "+(o.meta.date||"—")+"   Time: "+(o.meta.time||"—"));
   L.push("Outgoing SIC: "+(o.meta.out||o.sign.out||"—")+"   Incoming SIC: "+(o.meta.in||o.sign.in||"—"));
   const t=totalItems(); let done=0; const missed=[];
-  DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{ const on=o.items["s"+si+"_"+ii]; if(on)done++; else missed.push("• "+it); }));
+  DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{ const on=o.items["s"+si+"_"+ii]; if(on){done++;} else { const r=o.reasons&&o.reasons["s"+si+"_"+ii]; missed.push("• "+it+(r?("  — reason: "+r):"  — reason: (none given)")); } }));
   L.push(""); L.push("Checklist: "+done+" / "+t+" complete.");
-  if(missed.length){ L.push("NOT ticked:"); L.push(missed.join("\n")); }
+  if(missed.length){ L.push("NOT completed:"); L.push(missed.join("\n")); }
   if(CARRY.length){
     const flags=[]; CARRY.forEach((it,ci)=>{ if(o.carry["c_"+ci]){ const n=o.notes["c_"+ci]; flags.push("• "+it+(n?(": "+n):"")); }});
     L.push(""); L.push("Carry-over flags: "+(flags.length?"":"none"));
@@ -306,11 +353,11 @@ function reportHtml(o){
   const t=totalItems(); let done=0; let secHtml="";
   DATA.forEach((sec,si)=>{
     const conf=[], miss=[];
-    sec.items.forEach((it,ii)=>{ if(o.items["s"+si+"_"+ii]){done++;conf.push(it);} else miss.push(it); });
+    sec.items.forEach((it,ii)=>{ if(o.items["s"+si+"_"+ii]){done++;conf.push(esc(it));} else { const r=o.reasons&&o.reasons["s"+si+"_"+ii]; miss.push(esc(it)+' <span style="color:#777">&mdash; '+esc(r||"(no reason given)")+'</span>'); } });
     secHtml+='<tr><td style="padding:7px 10px;border-top:1px solid #eee;vertical-align:top;font-weight:600;color:#1F2A44;width:32%">'+esc(sec.title)+'</td>'+
       '<td style="padding:7px 10px;border-top:1px solid #eee">'+
-      (conf.length?('<span style="color:#2f7d52">\u2714 '+conf.map(esc).join('<br>\u2714 ')+'</span>'):'')+
-      (miss.length?((conf.length?'<br>':'')+'<span style="color:#9B2222">\u2716 '+miss.map(esc).join('<br>\u2716 ')+'</span>'):'')+
+      (conf.length?('<span style="color:#2f7d52">\u2714 '+conf.join('<br>\u2714 ')+'</span>'):'')+
+      (miss.length?((conf.length?'<br>':'')+'<span style="color:#9B2222">\u2716 '+miss.join('<br>\u2716 ')+'</span>'):'')+
       '</td></tr>';
   });
   let carryHtml='';
@@ -335,6 +382,17 @@ function reportHtml(o){
 }
 
 async function saveAndEmail(){
+  // Gate: every item must be ticked, or have a reason typed in.
+  revealUnchecked();
+  const pend = pendingItems();
+  if(pend.length){
+    pend.forEach(p=>{ if(p.inp) p.inp.closest('.reason').classList.add("need"); });
+    toast(pend.length+" item(s) need a tick or a reason");
+    pend[0].row.scrollIntoView({behavior:"smooth", block:"center"});
+    setTimeout(()=>{ if(pend[0].inp) pend[0].inp.focus(); }, 400);
+    return;
+  }
+
   const btn = document.getElementById("saveBtn");
   btn.disabled = true;
   btn.textContent = "Saving...";
@@ -374,7 +432,7 @@ async function saveAndEmail(){
     toast("\u2713 Saved locally \u00B7 email failed: " + msg);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Save";
+    updateGate();
   }
 }
 
@@ -390,10 +448,11 @@ function newHandover(){
   if(!confirm("Start a new handover? This clears the current form (saved reports are kept).")) return;
   document.querySelectorAll('#sections .item.on').forEach(r=>r.classList.remove("on"));
   document.querySelectorAll('[data-note]').forEach(n=>n.value="");
+  document.querySelectorAll('[data-reason]').forEach(n=>{ n.value=""; n.closest('.reason').classList.remove("show-reason","need"); });
   document.querySelectorAll('.confirm.on').forEach(c=>c.classList.remove("on"));
   ["m_time","m_out","m_in","s_out","s_in"].forEach(id=>setv(id,""));
   document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
-  updateProgress(); autosave(); toast("New handover started");
+  updateProgress(); updateGate(); autosave(); toast("New handover started");
 }
 
 let tt;
@@ -402,7 +461,7 @@ function toast(msg){ const e=document.getElementById("toast"); e.textContent=msg
 render();
 document.getElementById("m_date").value=new Date().toISOString().slice(0,10);
 try{ const d=localStorage.getItem(LS+"_draft"); if(d) apply(JSON.parse(d)); }catch(e){}
-renderLog(); updateProgress();
+renderLog(); updateProgress(); updateGate();
 </script>
 </body>
 </html>
